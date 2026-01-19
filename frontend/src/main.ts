@@ -17,6 +17,11 @@ const routes = [
         name: 'folder',
         component: () => import('./views/FolderView.vue'),
     },
+    {
+        path: '/queue',
+        name: 'queue',
+        component: () => import('./views/QueueView.vue'),
+    },
 ]
 
 const router = createRouter({
