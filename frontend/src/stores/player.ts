@@ -159,6 +159,35 @@ export const usePlayerStore = defineStore('player', () => {
         }
     })
 
+    function playIndex(index: number) {
+        if (index >= 0 && index < playlist.value.length) {
+            currentIndex.value = index
+            loadAndPlay()
+        }
+    }
+
+    function removeFromPlaylist(index: number) {
+        if (index >= 0 && index < playlist.value.length) {
+            playlist.value.splice(index, 1)
+            // Adjust current index if needed
+            if (index < currentIndex.value) {
+                currentIndex.value--
+            } else if (index === currentIndex.value) {
+                // Current track removed, play next if available
+                if (currentIndex.value >= playlist.value.length) {
+                    currentIndex.value = playlist.value.length - 1
+                }
+                if (playlist.value.length > 0) {
+                    loadAndPlay()
+                } else {
+                    // Playlist empty
+                    currentIndex.value = -1
+                    getAudio().pause()
+                }
+            }
+        }
+    }
+
     return {
         // State
         playlist,
@@ -184,5 +213,7 @@ export const usePlayerStore = defineStore('player', () => {
         seek,
         seekToProgress,
         setVolume,
+        playIndex,
+        removeFromPlaylist,
     }
 })

@@ -420,11 +420,12 @@ async function savePlaylist() {
 .track-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: 6px;
+  padding: 8px 12px;
   background: var(--bg-secondary);
   border-radius: var(--border-radius-sm);
   transition: all var(--transition-fast);
+  min-height: 40px;
 }
 
 .track-item:hover {
@@ -450,13 +451,14 @@ async function savePlaylist() {
 }
 
 .drag-handle {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
   cursor: grab;
+  flex-shrink: 0;
 }
 
 .drag-handle:active {
@@ -464,41 +466,48 @@ async function savePlaylist() {
 }
 
 .drag-handle svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .track-number {
-  width: 24px;
+  width: 20px;
   text-align: center;
-  font-size: var(--font-size-sm);
+  font-size: 11px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .track-info {
   flex: 1;
   cursor: pointer;
   min-width: 0;
+  overflow: hidden;
 }
 
 .track-name {
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .skip-toggle {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
+  gap: 4px;
+  font-size: 11px;
   color: var(--text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .skip-toggle input {
   accent-color: var(--accent-primary);
+  width: 14px;
+  height: 14px;
 }
 
 .skip-label {
@@ -512,8 +521,8 @@ async function savePlaylist() {
 }
 
 .play-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,6 +531,7 @@ async function savePlaylist() {
   color: white;
   opacity: 0;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .track-item:hover .play-btn {
@@ -529,7 +539,7 @@ async function savePlaylist() {
 }
 
 .play-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 </style>

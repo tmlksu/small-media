@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import PlayerBar from './components/PlayerBar.vue'
+import NavBar from './components/NavBar.vue'
 </script>
 
 <template>
@@ -8,7 +9,10 @@ import PlayerBar from './components/PlayerBar.vue'
     <main class="main-content">
       <RouterView />
     </main>
-    <PlayerBar />
+    <div class="bottom-container">
+      <PlayerBar />
+      <NavBar />
+    </div>
   </div>
 </template>
 
@@ -24,6 +28,14 @@ import PlayerBar from './components/PlayerBar.vue'
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 80px; /* Space for player bar */
+  padding-bottom: 140px; /* Space for player bar + navbar */
+}
+
+.bottom-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 </style>
