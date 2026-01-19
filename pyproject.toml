@@ -1,0 +1,84 @@
+[project]
+name = "small-media"
+version = "0.1.0"
+description = "Self-hosted private media player with on-the-fly transcoding"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend/src/small_media"]
+
+[tool.uv]
+dev-dependencies = [
+    "poethepoet>=0.31.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.poe.tasks]
+# Development
+dev = { shell = "poe backend & poe frontend", help = "Start both servers" }
+backend = { cmd = "uvicorn small_media.main:app --reload --port 8000", cwd = "backend/src", help = "Start backend server" }
+frontend = { cmd = "npm run dev", cwd = "frontend", help = "Start frontend server" }
+
+# Testing
+test = { shell = "poe test-backend && poe test-frontend", help = "Run all tests" }
+test-backend = { cmd = "pytest", cwd = "backend", help = "Run backend tests" }
+test-frontend = { cmd = "npm test", cwd = "frontend", help = "Run frontend tests" }
+
+# Linting & Formatting
+lint = { shell = "poe lint-backend && poe lint-frontend", help = "Lint all code" }
+lint-backend = { cmd = "ruff check backend/src", help = "Lint backend" }
+lint-frontend = { cmd = "npm run lint", cwd = "frontend", help = "Lint frontend" }
+
+format = { shell = "poe format-backend && poe format-frontend", help = "Format all code" }
+format-backend = { cmd = "ruff format backend/src", help = "Format backend" }
+format-frontend = { cmd = "npm run format", cwd = "frontend", help = "Format frontend" }
+
+# Type checking
+typecheck = { cmd = "mypy backend/src/small_media", help = "Type check backend" }
+
+# Build
+build = { shell = "cd frontend && npm run build", help = "Build frontend for production" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["backend/tests"]

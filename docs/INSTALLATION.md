@@ -8,7 +8,6 @@ This guide covers setting up Small Media for development and production.
 - **Node.js**: 20+ (for frontend)
 - **FFmpeg**: 6.0+ (for transcoding)
 - **uv**: Python package manager
-- **pnpm**: Node.js package manager (recommended)
 
 ## Quick Start
 
@@ -43,115 +42,126 @@ uv sync
 
 # Install frontend dependencies
 cd frontend
-pnpm install
+npm install
 cd ..
 ```
 
 ### 4. Configure Environment
 
 ```bash
-# Copy example environment file
 cp .env.example .env
-
-# Edit configuration
-vim .env
+# Edit MEDIA_PATH and CACHE_PATH
 ```
 
 Required environment variables:
 
 ```bash
-# Path to media files (HDD)
-MEDIA_PATH=/path/to/your/media
-
-# Path for transcoded cache (SSD recommended)
-CACHE_PATH=/path/to/cache
-
-# Optional: Audio settings
-AUDIO_QUALITY=2        # LAME VBR quality (0-9, lower = better)
-AUDIO_BITRATE=192      # Fallback CBR bitrate
+MEDIA_PATH=/path/to/your/media   # HDD for media files
+CACHE_PATH=/path/to/cache        # SSD for transcoded cache
 ```
 
 ### 5. Run Development Servers
 
 ```bash
-# Using poe tasks (recommended)
+# Using poe tasks
 poe dev
 
 # Or manually:
-# Terminal 1: Backend
-uv run uvicorn small_media.main:app --reload --port 8000
-
-# Terminal 2: Frontend
-cd frontend && pnpm dev
+uv run poe backend   # Terminal 1
+cd frontend && npm run dev   # Terminal 2
 ```
 
-Visit `http://localhost:5173` to access the application.
+Visit `http://localhost:5173`
 
 ---
 
-## Poe Tasks Reference
+## Docker Deployment (Recommended)
 
-All common tasks are defined in `pyproject.toml`:
-
-| Task | Command | Description |
-|------|---------|-------------|
-| `poe dev` | Start development servers | Backend + Frontend |
-| `poe backend` | Start backend only | FastAPI on :8000 |
-| `poe frontend` | Start frontend only | Vite on :5173 |
-| `poe test` | Run all tests | Backend + Frontend |
-| `poe lint` | Lint all code | Ruff + ESLint |
-| `poe format` | Format all code | Ruff + Prettier |
-| `poe build` | Build for production | Both packages |
-
----
-
-## Production Deployment
-
-### 1. Build Frontend
+### Quick Start with Docker Compose
 
 ```bash
-cd frontend
-pnpm build
+# Create directories
+mkdir -p media cache
+
+# Start the application
+docker compose up -d
+
+# View logs
+docker compose logs -f
 ```
 
-### 2. Configure Production Environment
+The application will be available at `http://localhost:7300`
 
-```bash
-# Production .env
-MEDIA_PATH=/mnt/hdd/media
-CACHE_PATH=/mnt/ssd/cache
-ENVIRONMENT=production
+### Custom Configuration
+
+Edit `docker-compose.yml` to customize:
+
+```yaml
+services:
+  small-media:
+    volumes:
+      # Mount your media directory
+      - /path/to/your/media:/media:ro
+      # Mount cache (ensure sufficient space)
+      - /path/to/cache:/cache
+    environment:
+      - AUDIO_QUALITY=2
+      - DEBUG=false
 ```
 
-### 3. Run with Production Server
-
-```bash
-uv run uvicorn small_media.main:app --host 0.0.0.0 --port 8000
-```
-
-### 4. Cloudflare Zero Trust Setup
-
-1. Create a Cloudflare Tunnel pointing to `localhost:8000`
-2. Configure Access policies in Cloudflare Zero Trust dashboard
-3. Access via your configured domain
-
----
-
-## Docker (Alternative)
+### Build and Run Manually
 
 ```bash
 # Build image
 docker build -t small-media .
 
-# Run with volume mounts
+# Run container
 docker run -d \
-  -p 8000:8000 \
+  --name small-media \
+  -p 7300:7300 \
   -v /path/to/media:/media:ro \
   -v /path/to/cache:/cache \
-  -e MEDIA_PATH=/media \
-  -e CACHE_PATH=/cache \
   small-media
 ```
+
+---
+
+## Production Deployment
+
+### With Cloudflare Zero Trust
+
+1. Run Docker container on port 7300
+2. Create Cloudflare Tunnel pointing to `localhost:7300`
+3. Configure Access policies in Cloudflare dashboard
+4. Access via your domain
+
+### Reverse Proxy (Nginx)
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name media.example.com;
+
+    location / {
+        proxy_pass http://localhost:7300;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+---
+
+## Poe Tasks Reference
+
+| Task | Description |
+|------|-------------|
+| `poe dev` | Start both servers |
+| `poe backend` | Backend only |
+| `poe frontend` | Frontend only |
+| `poe test` | Run all tests |
+| `poe lint` | Lint code |
+| `poe build` | Production build |
 
 ---
 
@@ -160,23 +170,26 @@ docker run -d \
 ### FFmpeg not found
 
 ```bash
-# Verify FFmpeg installation
 ffmpeg -version
-
 # If not installed, install via package manager
 ```
 
-### Permission denied on media files
+### Permission denied
 
 ```bash
-# Ensure the user running the server has read access
+# Ensure read access to media files
 ls -la /path/to/media
+
+# Ensure write access to cache
+mkdir -p /path/to/cache && chmod 755 /path/to/cache
 ```
 
-### Cache directory issues
+### Docker health check failing
 
 ```bash
-# Ensure cache directory exists and is writable
-mkdir -p /path/to/cache
-chmod 755 /path/to/cache
+# Check container logs
+docker compose logs small-media
+
+# Verify health endpoint
+curl http://localhost:7300/api/health
 ```
