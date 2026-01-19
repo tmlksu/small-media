@@ -6,9 +6,9 @@ services:
     ports:
       - "7300:7300"
     volumes:
-      # Mount your media directory (read-only recommended)
-      - ./media:/media:ro
-      # Mount cache directory (read-write for transcoded files)
+      # Mount media directory (read-write for playlist YAML files)
+      - ./media:/media
+      # Mount cache directory for transcoded files
       - ./cache:/cache
     environment:
       - MEDIA_PATH=/media
