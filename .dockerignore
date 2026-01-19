@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Node
+node_modules
+frontend/node_modules
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Docs (not needed in container)
+docs/
+
+# Test files
+backend/tests/
+
+# Environment files (use docker-compose environment)
+.env
+.env.local
+
+# Build artifacts already copied
+frontend/dist
+
+# OS
+.DS_Store
+Thumbs.db

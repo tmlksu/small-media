@@ -1,0 +1,24 @@
+services:
+  small-media:
+    build: .
+    container_name: small-media
+    restart: unless-stopped
+    ports:
+      - "7300:7300"
+    volumes:
+      # Mount your media directory (read-only recommended)
+      - ./media:/media:ro
+      # Mount cache directory (read-write for transcoded files)
+      - ./cache:/cache
+    environment:
+      - MEDIA_PATH=/media
+      - CACHE_PATH=/cache
+      - AUDIO_QUALITY=2
+      - AUDIO_BITRATE=192
+      - DEBUG=false
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7300/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
