@@ -1,0 +1,336 @@
+openapi: 3.1.0
+info:
+  title: Small Media API
+  description: Self-hosted private media player API
+  version: 0.1.0
+  license:
+    name: MIT
+
+servers:
+  - url: /api
+    description: API base path
+
+paths:
+  /folders:
+    get:
+      summary: List root folders
+      operationId: listRootFolders
+      tags:
+        - Folders
+      responses:
+        '200':
+          description: List of root folders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderList'
+
+  /folders/{path}:
+    get:
+      summary: List folder contents
+      operationId: listFolderContents
+      tags:
+        - Folders
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: URL-encoded folder path relative to media root
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Folder contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderContents'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /folders/{path}/playlist:
+    get:
+      summary: Get playlist for folder
+      operationId: getPlaylist
+      tags:
+        - Playlist
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Playlist with ordered tracks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update playlist order and skip flags
+      operationId: updatePlaylist
+      tags:
+        - Playlist
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaylistUpdate'
+      responses:
+        '200':
+          description: Playlist updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stream/{path}:
+    get:
+      summary: Stream audio file
+      operationId: streamAudio
+      tags:
+        - Stream
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: URL-encoded file path relative to media root
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audio stream
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stream/{path}/info:
+    get:
+      summary: Get audio file metadata
+      operationId: getAudioInfo
+      tags:
+        - Stream
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audio metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioInfo'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    FolderList:
+      type: object
+      properties:
+        folders:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderItem'
+      required:
+        - folders
+
+    FolderItem:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Folder display name
+        path:
+          type: string
+          description: URL-encoded relative path
+        hasAudio:
+          type: boolean
+          description: Whether folder contains audio files
+        subfolderCount:
+          type: integer
+          description: Number of subfolders
+      required:
+        - name
+        - path
+        - hasAudio
+        - subfolderCount
+
+    FolderContents:
+      type: object
+      properties:
+        path:
+          type: string
+        name:
+          type: string
+        folders:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderItem'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioFile'
+      required:
+        - path
+        - name
+        - folders
+        - files
+
+    AudioFile:
+      type: object
+      properties:
+        filename:
+          type: string
+        path:
+          type: string
+          description: URL-encoded relative path for streaming
+        format:
+          type: string
+          enum: [wav, mp3, m4a, mp4, flac, ogg]
+        size:
+          type: integer
+          description: File size in bytes
+      required:
+        - filename
+        - path
+        - format
+        - size
+
+    Playlist:
+      type: object
+      properties:
+        path:
+          type: string
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaylistTrack'
+      required:
+        - path
+        - tracks
+
+    PlaylistTrack:
+      type: object
+      properties:
+        filename:
+          type: string
+        path:
+          type: string
+        skip:
+          type: boolean
+          default: false
+        duration:
+          type: number
+          description: Duration in seconds (if known)
+          nullable: true
+      required:
+        - filename
+        - path
+        - skip
+
+    PlaylistUpdate:
+      type: object
+      properties:
+        tracks:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+              skip:
+                type: boolean
+            required:
+              - filename
+              - skip
+      required:
+        - tracks
+
+    AudioInfo:
+      type: object
+      properties:
+        filename:
+          type: string
+        duration:
+          type: number
+          description: Duration in seconds
+        format:
+          type: string
+        bitrate:
+          type: integer
+          description: Bitrate in kbps
+        sampleRate:
+          type: integer
+          description: Sample rate in Hz
+        channels:
+          type: integer
+      required:
+        - filename
+        - duration
+        - format
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+          nullable: true
+      required:
+        - error
+
+tags:
+  - name: Folders
+    description: Folder navigation
+  - name: Playlist
+    description: Playlist management
+  - name: Stream
+    description: Audio streaming
