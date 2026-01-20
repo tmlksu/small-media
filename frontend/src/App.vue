@@ -1,7 +1,16 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import PlayerBar from './components/PlayerBar.vue'
 import NavBar from './components/NavBar.vue'
+import { usePlayerStore } from './stores/player'
+
+const playerStore = usePlayerStore()
+
+// Resume playback state after page reload (e.g., after CFZT session refresh)
+onMounted(() => {
+  playerStore.resumePlayback()
+})
 </script>
 
 <template>
