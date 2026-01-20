@@ -1,18 +1,20 @@
 """API routes for audio streaming."""
 
-import urllib.parse
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from ..config import get_settings
 from ..models import AudioInfo, ErrorResponse
 from ..services.filesystem import decode_path, get_file_extension, is_safe_path
 from ..services.transcoder import (
     get_audio_info,
+    get_cached_path,
     is_mp3_passthrough,
     stream_transcoded,
+    transcode_to_cache,
 )
 
 router = APIRouter(prefix="/stream", tags=["Stream"])
@@ -40,7 +42,12 @@ def get_content_type(file_path: Path, is_passthrough: bool) -> str:
     responses={404: {"model": ErrorResponse}},
 )
 async def stream_audio(path: str):
-    """Stream audio file, transcoding if necessary."""
+    """Stream audio file, transcoding if necessary.
+    
+    Uses FileResponse for cached files and MP3 passthrough to support
+    Range requests (seeking/resume). Falls back to StreamingResponse
+    for initial transcoding.
+    """
     settings = get_settings()
 
     # Validate path
@@ -59,16 +66,48 @@ async def stream_audio(path: str):
     if ext not in settings.allowed_extensions_set:
         raise HTTPException(status_code=404, detail="File type not supported")
 
-    # Determine if passthrough
+    # Determine if passthrough (original MP3)
     is_passthrough = is_mp3_passthrough(file_path)
-    content_type = get_content_type(file_path, is_passthrough)
-
-    # Stream the audio
+    
+    # For MP3 passthrough, use FileResponse directly (supports Range requests)
+    if is_passthrough:
+        return FileResponse(
+            file_path,
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    
+    # Check for cached transcoded file
+    cached_path = get_cached_path(file_path, settings)
+    
+    if cached_path.exists():
+        # Cached file exists - use FileResponse (supports Range requests)
+        return FileResponse(
+            cached_path,
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    
+    # No cache - transcode first, then return FileResponse
+    # This ensures the file is complete before serving (for Range support)
+    success = await asyncio.get_event_loop().run_in_executor(
+        None, transcode_to_cache, file_path, cached_path, settings
+    )
+    
+    if success and cached_path.exists():
+        return FileResponse(
+            cached_path,
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    
+    # Fallback: stream original file if transcoding failed
+    content_type = get_content_type(file_path, True)
     return StreamingResponse(
         stream_transcoded(file_path, settings),
         media_type=content_type,
         headers={
-            "Accept-Ranges": "bytes",
+            "Accept-Ranges": "none",  # No Range support for fallback
             "Cache-Control": "public, max-age=3600",
         },
     )

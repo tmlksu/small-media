@@ -1,5 +1,5 @@
 /**
- * Audio player store
+ * Audio player store with session persistence
  */
 
 import { defineStore } from 'pinia'
@@ -7,14 +7,44 @@ import { ref, computed, watch } from 'vue'
 import type { AudioFile } from '../types'
 import { getStreamUrl } from '../api/client'
 
+// Session storage keys
+const STORAGE_KEYS = {
+    playlist: 'player:playlist',
+    currentIndex: 'player:currentIndex',
+    currentTime: 'player:currentTime',
+    volume: 'player:volume',
+}
+
+// Load persisted state from sessionStorage
+function loadPersistedState() {
+    try {
+        const playlist = sessionStorage.getItem(STORAGE_KEYS.playlist)
+        const currentIndex = sessionStorage.getItem(STORAGE_KEYS.currentIndex)
+        const currentTime = sessionStorage.getItem(STORAGE_KEYS.currentTime)
+        const volume = sessionStorage.getItem(STORAGE_KEYS.volume)
+
+        return {
+            playlist: playlist ? JSON.parse(playlist) : [],
+            currentIndex: currentIndex ? parseInt(currentIndex, 10) : -1,
+            currentTime: currentTime ? parseFloat(currentTime) : 0,
+            volume: volume ? parseFloat(volume) : 1,
+        }
+    } catch {
+        return { playlist: [], currentIndex: -1, currentTime: 0, volume: 1 }
+    }
+}
+
 export const usePlayerStore = defineStore('player', () => {
+    // Load persisted state
+    const persisted = loadPersistedState()
+
     // State
-    const playlist = ref<AudioFile[]>([])
-    const currentIndex = ref<number>(-1)
+    const playlist = ref<AudioFile[]>(persisted.playlist)
+    const currentIndex = ref<number>(persisted.currentIndex)
     const isPlaying = ref(false)
-    const currentTime = ref(0)
+    const currentTime = ref(persisted.currentTime)
     const duration = ref(0)
-    const volume = ref(1)
+    const volume = ref(persisted.volume)
 
     // Audio element (created on demand)
     let audio: HTMLAudioElement | null = null
@@ -152,11 +182,31 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
+    // Watch for state changes and persist to sessionStorage
+    watch(playlist, (p) => {
+        sessionStorage.setItem(STORAGE_KEYS.playlist, JSON.stringify(p))
+    }, { deep: true })
+
+    watch(currentIndex, (i) => {
+        sessionStorage.setItem(STORAGE_KEYS.currentIndex, String(i))
+    })
+
+    // Throttle currentTime saves (every 5 seconds)
+    let lastTimeSave = 0
+    watch(currentTime, (t) => {
+        const now = Date.now()
+        if (now - lastTimeSave > 5000) {
+            sessionStorage.setItem(STORAGE_KEYS.currentTime, String(t))
+            lastTimeSave = now
+        }
+    })
+
     // Watch volume changes
     watch(volume, (v) => {
         if (audio) {
             audio.volume = v
         }
+        sessionStorage.setItem(STORAGE_KEYS.volume, String(v))
     })
 
     function playIndex(index: number) {
@@ -188,6 +238,31 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
+    /**
+     * Resume playback from persisted state (after page reload)
+     * Call this after the app is mounted
+     */
+    function resumePlayback() {
+        if (playlist.value.length > 0 && currentIndex.value >= 0) {
+            const track = currentTrack.value
+            if (track) {
+                const audioEl = getAudio()
+                audioEl.src = getStreamUrl(track.path)
+                audioEl.load()
+
+                // Seek to saved position once metadata is loaded
+                const savedTime = persisted.currentTime
+                if (savedTime > 0) {
+                    audioEl.addEventListener('loadedmetadata', function onLoaded() {
+                        audioEl.currentTime = savedTime
+                        audioEl.removeEventListener('loadedmetadata', onLoaded)
+                    })
+                }
+                // Don't auto-play - wait for user interaction
+            }
+        }
+    }
+
     return {
         // State
         playlist,
@@ -215,5 +290,6 @@ export const usePlayerStore = defineStore('player', () => {
         setVolume,
         playIndex,
         removeFromPlaylist,
+        resumePlayback,
     }
 })
