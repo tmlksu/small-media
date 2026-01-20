@@ -22,6 +22,21 @@ class ApiError extends Error {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
+    // Detect Cloudflare Zero Trust session expiration
+    // When JWT expires, CFZT redirects to login page
+    if (response.redirected && response.url.includes('cloudflareaccess.com')) {
+        window.location.href = response.url
+        throw new ApiError(401, 'Session expired, redirecting to login...')
+    }
+
+    // Also check for HTML response (CFZT might return login page)
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('text/html') && !response.ok) {
+        // Likely a CFZT login page, redirect to current page to trigger auth
+        window.location.reload()
+        throw new ApiError(401, 'Session expired, please log in again')
+    }
+
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }))
         throw new ApiError(response.status, error.error || 'Request failed')
