@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg'],
       manifest: {
@@ -24,34 +27,6 @@ export default defineConfig({
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any maskable',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/.*\/api\/folders/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-folders',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60, // 1 hour
-              },
-            },
-          },
-          {
-            urlPattern: /^https?:\/\/.*\/api\/stream\//,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'audio-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
-              },
-              rangeRequests: true,
-            },
           },
         ],
       },
