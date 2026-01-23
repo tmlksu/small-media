@@ -14,6 +14,8 @@ import { registerRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
+import { RangeRequestsPlugin } from 'workbox-range-requests'
+
 declare let self: ServiceWorkerGlobalScope
 
 // Precache static assets generated during build
@@ -22,45 +24,46 @@ precacheAndRoute(self.__WB_MANIFEST)
 // API folders - NetworkFirst strategy
 // Try network first, fallback to cache if offline
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/folders'),
-  new NetworkFirst({
-    cacheName: 'api-folders',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60, // 1 hour
-      }),
-    ],
-  })
+    ({ url }) => url.pathname.startsWith('/api/folders'),
+    new NetworkFirst({
+        cacheName: 'api-folders',
+        plugins: [
+            new ExpirationPlugin({
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60, // 1 hour
+            }),
+        ],
+    })
 )
 
 // Audio streaming - CacheFirst strategy
 // Use cache first for performance, with range request support
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/stream/'),
-  new CacheFirst({
-    cacheName: 'audio-cache',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
-      }),
-    ],
-  })
+    ({ url }) => url.pathname.startsWith('/api/stream/'),
+    new CacheFirst({
+        cacheName: 'audio-cache',
+        plugins: [
+            new ExpirationPlugin({
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+            }),
+            new RangeRequestsPlugin(),
+        ],
+    })
 )
 
 // CRITICAL: Do NOT intercept navigation requests
 // This event listener ensures navigation requests pass through to the browser,
 // allowing Cloudflare Zero Trust to handle 302 redirects properly.
 self.addEventListener('fetch', (event: FetchEvent) => {
-  // Navigation requests (page loads) must NOT be intercepted
-  // to allow CFZT authentication flow to work
-  if (event.request.mode === 'navigate') {
-    // Do NOT call event.respondWith()
-    // Let the browser handle the request directly
-    return
-  }
+    // Navigation requests (page loads) must NOT be intercepted
+    // to allow CFZT authentication flow to work
+    if (event.request.mode === 'navigate') {
+        // Do NOT call event.respondWith()
+        // Let the browser handle the request directly
+        return
+    }
 
-  // All other requests (API, streams, etc.) are handled by
-  // the registerRoute() handlers above
+    // All other requests (API, streams, etc.) are handled by
+    // the registerRoute() handlers above
 })
