@@ -33,12 +33,14 @@ watch(() => route.params.path, () => {
 
 async function loadCurrentFolder() {
   const path = currentPath.value
+  // Reset playlist first so the previous folder's tracks never linger
+  // as "ghost" entries when the new folder has no audio files.
+  playlist.value = []
   if (path) {
     await folderStore.loadFolder(path)
     await loadPlaylist()
   } else {
     folderStore.loadRootFolders()
-    playlist.value = []
   }
 }
 
