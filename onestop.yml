@@ -1,0 +1,10 @@
+# onestop 公開マニフェスト — small-media が自分の公開仕様を宣言する。
+#   実体は riad（自宅）で動く。riad 上で `onestop publish --from /opt/small-media` / `onestop unpublish smedia`。
+#   2026-10-02 に CF の実態から採録（onestop adopt --manifest smedia）。publish し直してはいない。
+name: smedia                # → smedia.peyan.net
+port: 7300
+mode: direct                # ingress を localhost:7300 直結
+policies:                   # 付与する Access ポリシー（precedence 順）
+  - strictly-only-me        # 本人だけ（pismilish のグループ include より狭い）
+session_duration: 730h      # CF 上限(1ヶ月)。音楽再生中にセッションが切れないように
+docker: { compose: docker-compose.yml, service: small-media }   # 実体は Docker。onestop は公開のみ担当
