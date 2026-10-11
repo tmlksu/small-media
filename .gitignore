@@ -52,3 +52,6 @@ Thumbs.db
 # Project specific
 _SAMPLE_*.md
 media/test
+
+# Local deployment manifest (contains host/domain info; keep out of the public repo)
+onestop.yml
